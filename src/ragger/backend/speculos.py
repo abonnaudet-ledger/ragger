@@ -124,12 +124,22 @@ class SpeculosBackend(BackendInterface):
     def both_click(self) -> None:
         self._client.press_and_release("both")
 
-    def _save_screenshot(self, path: Path):
+    def _get_snaps_dir_path(self, path: Path, test_case_name: Path, is_golden: bool) -> Path:
+        if is_golden:
+            subdir = "snapshots"
+        else:
+            subdir = "snapshots-tmp"
+        return path / subdir / self._firmware.device / test_case_name
+
+    def _get_snap_path(self, path: Path, index: int) -> Path:
+        return path / f"{str(index).zfill(5)}.png"
+
+    def _save_snap(self, dir_path: Path, index: int):
         screenshot = self._client.get_screenshot()
         img = Image.open(BytesIO(screenshot))
-        img.save(path)
+        img.save(self._get_snap_path(dir_path, index))
 
-    def _screenshot_equal_with_crop(self, path: Path, bytes: BytesIO, crop: Crop = None):
+    def _snap_equal_with_crop(self, path: Path, bytes: BytesIO, crop: Crop = None):
         if crop is not None:
             return screenshot_equal(f"{path}",
                                     bytes,
@@ -140,34 +150,30 @@ class SpeculosBackend(BackendInterface):
         else:
             return screenshot_equal(f"{path}", bytes)
 
-    def _compare_screenshot_with_timeout(self,
-                                         path: Path,
-                                         timeout_s: float = 5.0,
-                                         crop: Crop = None):
+    def _compare_snap_with_timeout(self, path: Path, timeout_s: float = 5.0, crop: Crop = None):
         start = time()
         now = start
         while not (now - start > timeout_s):
             screenshot = self._client.get_screenshot()
-            if self._screenshot_equal_with_crop(path, BytesIO(screenshot), crop):
+            if self._snap_equal_with_crop(path, BytesIO(screenshot), crop):
                 return True
             now = time()
         return False
 
     def _compare_snaps(self, path: Path, test_case_name: Path, last_img_idx: int = 0) -> bool:
 
-        snapshot_golden_path = path / "snapshots" / self._firmware.device / test_case_name
-        snapshot_tmp_path = path / "snapshots-tmp" / self._firmware.device / test_case_name
+        snaps_golden_path = self._get_snaps_dir_path(path, test_case_name, True)
+        snaps_tmp_path = self._get_snaps_dir_path(path, test_case_name, False)
 
-        if not snapshot_golden_path.is_dir():
-            raise ValueError(f"Golden snapshots directory ({snapshot_golden_path}) does not exist.")
+        if not snaps_golden_path.is_dir():
+            raise ValueError(f"Golden snapshots directory ({snaps_golden_path}) does not exist.")
 
-        if not snapshot_tmp_path.is_dir():
-            raise ValueError(
-                f"Temporary snapshots directory ({snapshot_golden_path}) does not exist.")
+        if not snaps_tmp_path.is_dir():
+            raise ValueError(f"Temporary snapshots directory ({snaps_golden_path}) does not exist.")
 
         for i in range(0, last_img_idx + 1):
-            golden = snapshot_golden_path / f"{str(i).zfill(5)}.png"
-            tmp = snapshot_tmp_path / f"{str(i).zfill(5)}.png"
+            golden = self._get_snap_path(snaps_golden_path, i)
+            tmp = self._get_snap_path(snaps_tmp_path, i)
             if not screenshot_equal(str(golden), str(tmp)):
                 raise ValueError(f"Screenshots {tmp} does not match golden.")
         return True
@@ -182,23 +188,23 @@ class SpeculosBackend(BackendInterface):
                             crop_first: Crop = None,
                             crop_last: Crop = None) -> int:
 
-        snapshot_golden_path = path / "snapshots" / self._firmware.device / test_case_name
-        snapshot_tmp_path = path / "snapshots-tmp" / self._firmware.device / test_case_name
+        snaps_golden_path = self._get_snaps_dir_path(path, test_case_name, True)
+        snaps_tmp_path = self._get_snaps_dir_path(path, test_case_name, False)
 
-        if not snapshot_golden_path.is_dir():
-            raise ValueError(f"Golden snapshots directory ({snapshot_golden_path}) does not exist.")
+        if not snaps_golden_path.is_dir():
+            raise ValueError(f"Golden snapshots directory ({snaps_golden_path}) does not exist.")
 
-        snapshot_tmp_path.mkdir(parents=True, exist_ok=True)
+        snaps_tmp_path.mkdir(parents=True, exist_ok=True)
 
         img_idx = start_img_idx
-        first_golden_snap = snapshot_golden_path / f"{str(img_idx).zfill(5)}.png"
-        last_golden_snap = snapshot_golden_path / f"{str(last_img_idx).zfill(5)}.png"
+        first_golden_snap = self._get_snap_path(snaps_golden_path, img_idx)
+        last_golden_snap = self._get_snap_path(snaps_golden_path, last_img_idx)
         # Check if the first snapshot is found before going in the navigation loop.
         # It saves time in non-nominal cases where the navigation flow does not start.
-        if self._compare_screenshot_with_timeout(first_golden_snap, timeout_s=2, crop=crop_first):
+        if self._compare_snap_with_timeout(first_golden_snap, timeout_s=2, crop=crop_first):
             start = time()
             # Navigate until the last snapshot specified in argument is found.
-            while not self._compare_screenshot_with_timeout(
+            while not self._compare_snap_with_timeout(
                     last_golden_snap, timeout_s=0.5, crop=crop_last):
                 now = time()
                 # Global navigation loop timeout in case the snapshot is never found.
@@ -207,8 +213,7 @@ class SpeculosBackend(BackendInterface):
 
                 # Take snapshots if required.
                 if take_snaps:
-                    filename = snapshot_tmp_path / f"{str(img_idx).zfill(5)}.png"
-                    self._save_screenshot(filename)
+                    self._save_snap(snaps_tmp_path, img_idx)
 
                 # TODO : Allow custom actions
                 # Go to the next screen.
@@ -217,8 +222,7 @@ class SpeculosBackend(BackendInterface):
 
             # Take last snapshot if required.
             if take_snaps:
-                filename = snapshot_tmp_path / f"{str(img_idx).zfill(5)}.png"
-                self._save_screenshot(filename)
+                self._save_snap(snaps_tmp_path, img_idx)
 
             # TODO : Allow custom actions
             # Validation action when last snapshot is found.
@@ -227,9 +231,7 @@ class SpeculosBackend(BackendInterface):
             # Make sure there is a screen update after the final action.
             start = time()
             last_screen_update_timeout = 2
-            while self._compare_screenshot_with_timeout(last_golden_snap,
-                                                        timeout_s=0.5,
-                                                        crop=crop_last):
+            while self._compare_snap_with_timeout(last_golden_snap, timeout_s=0.5, crop=crop_last):
                 now = time()
                 if (now - start > last_screen_update_timeout):
                     raise ValueError(
