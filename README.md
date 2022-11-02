@@ -68,6 +68,7 @@ The `src/ragger/backend/interface.py` file describes the methods that can be imp
 * `navigate`: navigate on the device according to a set of navigation instructions provided.
 * `navigate_until_snap`: navigate on the device (by performing right clicks) until a snapshot is found and then validate (with both click).
 * `navigate_and_compare_until_snap`: same as the previous method but compare screenshots of the flow with "golden" images after the last snapshot is found.
+* `navigate_and_compare`: navigate on the device according to a set of navigation instructions provided then compare each step screenshot with "golden images".
 
 ## Examples
 ### With `pytest`

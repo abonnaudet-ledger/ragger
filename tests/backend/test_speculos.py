@@ -6,6 +6,7 @@ from typing import Optional
 from ragger import Firmware, RAPDU, ExceptionRAPDU
 from ragger.backend import SpeculosBackend
 from ragger.backend import RaisePolicy
+from ragger.backend import NavigationInstruction
 
 from tests.stubs import SpeculosServerStub, EndPoint, APDUStatus
 
@@ -196,3 +197,44 @@ class TestbackendSpeculos(TestCase):
                     with self.assertRaises(ValueError) as error:
                         self.backend.navigate_until_snap(ROOT_SCREENSHOT_PATH, "generic", 0, 4)
                     self.assertIn("Timeout waiting for snap", str(error.exception))
+
+    def test_navigate_and_compare(self):
+        with patch("speculos.client.subprocess"):
+            with SpeculosServerStub():
+                with self.backend:
+                    instructions = [
+                        NavigationInstruction.GO_TO_NEXT_SCREEN,
+                        NavigationInstruction.GO_TO_NEXT_SCREEN,
+                        NavigationInstruction.GO_TO_PREVIOUS_SCREEN,
+                        NavigationInstruction.GO_TO_NEXT_SCREEN, NavigationInstruction.CONFIRM,
+                        NavigationInstruction.GO_TO_NEXT_SCREEN, NavigationInstruction.CONFIRM
+                    ]
+                    ret = self.backend.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                                            "test_navigate_and_compare",
+                                                            instructions)
+                self.assertTrue(ret)
+
+    def test_navigate_and_compare_no_golden(self):
+        with patch("speculos.client.subprocess"):
+            with SpeculosServerStub():
+                with self.backend:
+                    instructions = [NavigationInstruction.GO_TO_NEXT_SCREEN]
+                    with self.assertRaises(FileNotFoundError) as error:
+                        self.backend.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                                          "test_navigate_and_compare_no_golden",
+                                                          instructions)
+                    self.assertIn("No such file or directory", str(error.exception))
+                    self.assertIn("test_navigate_and_compare_no_golden/00001.png",
+                                  str(error.exception))
+
+    def test_navigate_and_compare_wrong_golden(self):
+        with patch("speculos.client.subprocess"):
+            with SpeculosServerStub():
+                with self.backend:
+                    instructions = [NavigationInstruction.GO_TO_NEXT_SCREEN]
+                    with self.assertRaises(ValueError) as error:
+                        self.backend.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                                          "test_navigate_and_compare_wrong_golden",
+                                                          instructions)
+                    self.assertIn("Screenshots", str(error.exception))
+                    self.assertIn("00001.png does not match golden", str(error.exception))

@@ -15,14 +15,14 @@
 """
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator, Optional
+from typing import Generator, Optional, List
 
 from ledgerwallet.client import LedgerClient, CommException
 from ledgerwallet.transport import HidDevice
 
 from ragger import logger, RAPDU, Crop
 from ragger.error import ExceptionRAPDU
-from .interface import BackendInterface
+from .interface import BackendInterface, NavigationInstruction
 
 
 def raise_policy_enforcer(function):
@@ -117,4 +117,8 @@ class LedgerWalletBackend(BackendInterface):
                                         test_case_name: Path,
                                         start_img_idx: int = 0,
                                         last_img_idx: int = 0) -> bool:
+        pass
+
+    def navigate_and_compare(self, path: Path, test_case_name: Path,
+                             instructions: List[NavigationInstruction]) -> bool:
         pass

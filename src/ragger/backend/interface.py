@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from enum import Enum, auto
 from pathlib import Path
 from types import TracebackType
-from typing import Optional, Type, Generator
+from typing import Optional, Type, Generator, List
 
 from ragger.firmware import Firmware
 from ragger.utils import pack_APDU, RAPDU, Crop
@@ -385,6 +385,32 @@ class BackendInterface(ABC):
         :param crop_last: Crop (left, upper, right or lower pixels) last snapshot image for comparison
                           (useful if using a generic snapshot).
         :type crop_last: Crop
+
+        :return: None
+        :rtype: NoneType
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def navigate_and_compare(self, path: Path, test_case_name: Path,
+                             instructions: List[NavigationInstruction]) -> bool:
+        """
+        Navigate on the device according to a set of navigation instructions
+        provided then compare each step screenshot with "golden images".
+
+        This method may be left void on backends connecting to physical devices,
+        where a physical interaction must be performed instead.
+        This will prevent the instrumentation to fail (the void method won't
+        raise `NotImplementedError`), but the instrumentation flow will probably
+        get stuck (on further call to `receive` for instance) until the expected
+        action is performed on the device.
+
+        :param path: Absolute path to the snapshots directory.
+        :type path: Path
+        :param test_case_name: Relative path to the test case snapshots directory (from path).
+        :type test_case_name: Path
+        :param instructions: List of navigation instructions.
+        :type instructions: List[NavigationInstruction]
 
         :return: None
         :rtype: NoneType

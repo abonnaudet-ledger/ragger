@@ -15,13 +15,13 @@
 """
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional, Generator
+from typing import Optional, Generator, List
 
 from ledgercomm import Transport
 
 from ragger import logger, RAPDU, Firmware, Crop
 from ragger.error import ExceptionRAPDU
-from .interface import BackendInterface
+from .interface import BackendInterface, NavigationInstruction
 
 
 def raise_policy_enforcer(function):
@@ -118,4 +118,8 @@ class LedgerCommBackend(BackendInterface):
                                         test_case_name: Path,
                                         start_img_idx: int = 0,
                                         last_img_idx: int = 0) -> bool:
+        pass
+
+    def navigate_and_compare(self, path: Path, test_case_name: Path,
+                             instructions: List[NavigationInstruction]) -> bool:
         pass

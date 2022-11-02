@@ -38,6 +38,9 @@ class DummyBackend(BackendInterface):
     def navigate_until_snap(self, *args, **kwargs):
         return self.mock.navigate_until_snap(*args, **kwargs)
 
+    def navigate_and_compare(self, *args, **kwargs):
+        return self.mock.navigate_and_compare(*args, **kwargs)
+
     def exchange_async_raw(self, *args, **kwargs):
         return self.mock.exchange_async_raw(*args, **kwargs)
 

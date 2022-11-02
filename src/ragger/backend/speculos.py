@@ -17,7 +17,7 @@ from pathlib import Path
 from contextlib import contextmanager
 from io import BytesIO
 from time import time
-from typing import Optional, Generator
+from typing import Optional, Generator, List
 
 from PIL import Image
 from speculos.client import SpeculosClient, ApduResponse, ApduException, screenshot_equal
@@ -250,3 +250,20 @@ class SpeculosBackend(BackendInterface):
         img_idx = self.navigate_until_snap(path, test_case_name, start_img_idx, last_img_idx, True)
         # Then compare all snapshots taken to golden images.
         return self._compare_snaps(path, test_case_name, img_idx)
+
+    def navigate_and_compare(self, path: Path, test_case_name: Path,
+                             instructions: List[NavigationInstruction]) -> bool:
+        snaps_tmp_path = self._get_snaps_dir_path(path, test_case_name, False)
+        snaps_tmp_path.mkdir(parents=True, exist_ok=True)
+
+        # First navigate to the last step and take snapshots of every screen in the flow.
+        for idx, instruction in enumerate(instructions):
+            self._save_snap(snaps_tmp_path, idx)
+
+            self.navigate([instruction])
+
+        # Take last screen snapshot
+        self._save_snap(snaps_tmp_path, len(instructions))
+
+        # Then compare all snapshots taken to golden images.
+        return self._compare_snaps(path, test_case_name, len(instructions))

@@ -13,7 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-from .interface import BackendInterface, RaisePolicy
+from .interface import BackendInterface, RaisePolicy, NavigationInstruction
 
 
 ERROR_MSG = "This backend needs {}. Please install this package (run `pip install " \
@@ -48,5 +48,6 @@ except ImportError:
 
 
 __all__ = [
-    "SpeculosBackend", "LedgerCommBackend", "LedgerWalletBackend", "BackendInterface", "RaisePolicy"
+    "SpeculosBackend", "LedgerCommBackend", "LedgerWalletBackend", "BackendInterface",
+    "RaisePolicy", "NavigationInstruction"
 ]
