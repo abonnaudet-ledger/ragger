@@ -30,6 +30,12 @@ class RaisePolicy(Enum):
     RAISE_ALL = auto()
 
 
+class NavigationInstruction(Enum):
+    GO_TO_NEXT_SCREEN = auto()
+    GO_TO_PREVIOUS_SCREEN = auto()
+    CONFIRM = auto()
+
+
 class BackendInterface(ABC):
 
     def __init__(self, firmware: Firmware):
@@ -287,6 +293,28 @@ class BackendInterface(ABC):
         :rtype: NoneType
         """
         raise NotImplementedError
+
+    def navigate(self, instructions: List[NavigationInstruction]) -> None:
+        """
+        Navigate on the device according to a set of navigation instructions provided.
+
+        :param instructions: Set of navigation instructions.
+        :type instructions: List[NavigationInstruction]
+
+        :raises NotImplementedError: If the navigation instruction is not implemented.
+
+        :return: None
+        :rtype: NoneType
+        """
+        for instruction in instructions:
+            if instruction == NavigationInstruction.GO_TO_NEXT_SCREEN:
+                self.right_click()
+            elif instruction == NavigationInstruction.GO_TO_PREVIOUS_SCREEN:
+                self.left_click()
+            elif instruction == NavigationInstruction.CONFIRM:
+                self.both_click()
+            else:
+                raise NotImplementedError
 
     @abstractmethod
     def navigate_and_compare_until_snap(self,

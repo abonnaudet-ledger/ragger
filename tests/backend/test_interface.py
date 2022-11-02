@@ -29,6 +29,9 @@ class DummyBackend(BackendInterface):
     def left_click(self):
         self.mock.left_click()
 
+    def navigate(self):
+        self.mock.navigate()
+
     def navigate_and_compare_until_snap(self, *args, **kwargs):
         return self.mock.navigate_and_compare_until_snap(*args, **kwargs)
 

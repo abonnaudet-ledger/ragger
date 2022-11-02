@@ -26,7 +26,7 @@ from ragger import logger
 from ragger.error import ExceptionRAPDU
 from ragger.firmware import Firmware
 from ragger.utils import RAPDU, Crop
-from .interface import BackendInterface
+from .interface import BackendInterface, NavigationInstruction
 
 
 def raise_policy_enforcer(function):
@@ -217,7 +217,7 @@ class SpeculosBackend(BackendInterface):
 
                 # TODO : Allow custom actions
                 # Go to the next screen.
-                self.right_click()
+                self.navigate([NavigationInstruction.GO_TO_NEXT_SCREEN])
                 img_idx += 1
 
             # Take last snapshot if required.
@@ -226,7 +226,7 @@ class SpeculosBackend(BackendInterface):
 
             # TODO : Allow custom actions
             # Validation action when last snapshot is found.
-            self.both_click()
+            self.navigate([NavigationInstruction.CONFIRM])
 
             # Make sure there is a screen update after the final action.
             start = time()
